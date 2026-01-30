@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Large binaries and tools
+*.exe
+*.zip
+*.bin
+*.hex
+*.elf
+*.o
+*.iso
+
+# Generated data and exports
+exports/
+**/exports/
+report.html
+**/report.html
+mnemo_*.png
+dashboard_*.png
