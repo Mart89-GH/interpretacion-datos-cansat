@@ -155,7 +155,23 @@ void setup() {
 // LOOP
 // ===================================================================
 void loop() {
-  // Verificar si hay datos disponibles del E32
+  // === 1. LEER COMANDOS DEL SERIAL MONITOR Y ENVIAR AL EMISOR ===
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.length() > 0) {
+      Serial.print(F(">>> ENVIANDO COMANDO: "));
+      Serial.println(cmd);
+      
+      esperarAUX();
+      e32Serial.println(cmd);
+      esperarAUX();
+      
+      Serial.println(F(">>> COMANDO ENVIADO OK"));
+    }
+  }
+
+  // === 2. VERIFICAR SI HAY DATOS DISPONIBLES DEL E32 ===
   if (!e32Serial.available()) {
     return;
   }

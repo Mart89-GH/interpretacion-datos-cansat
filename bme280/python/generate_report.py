@@ -6,7 +6,7 @@ import statistics
 # Configuration
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-CSV_FILE = os.path.join(DATA_DIR, "bme280_data.csv")
+CSV_FILE = os.path.join(DATA_DIR, "bmp280_data.csv")
 OUTPUT_HTML = os.path.join(DATA_DIR, "report.html")
 
 # CSS Styles (Embedded for standalone file)
@@ -139,7 +139,6 @@ ALTITUDE_TOLERANCE = 500.0
 VALID_RANGES = {
     "alt": (BASELINE_ALTITUDE - ALTITUDE_TOLERANCE, BASELINE_ALTITUDE + ALTITUDE_TOLERANCE),
     "temp": (-40.0, 85.0),
-    "hum": (0.0, 100.0),
     "pres": (300.0, 1100.0),
 }
 
@@ -157,7 +156,6 @@ def read_data(filepath):
     data = {
         "timestamp": [],
         "temp": [],
-        "hum": [],
         "pres": [],
         "alt": []
     }
@@ -169,14 +167,12 @@ def read_data(filepath):
                 try:
                     # Parse values
                     temp = float(row['temperature_C'])
-                    hum = float(row['humidity_%'])
                     pres = float(row['pressure_hPa'])
                     alt = float(row['altitude_m'])
                     ts_str = row['timestamp']
 
                     # Filter invalid values (Cribado de datos excesivos/erróneos)
                     if not (is_valid(temp, "temp") and 
-                            is_valid(hum, "hum") and 
                             is_valid(pres, "pres") and 
                             is_valid(alt, "alt")):
                         continue
@@ -184,7 +180,6 @@ def read_data(filepath):
                     # Append only if all values are valid
                     data['timestamp'].append(ts_str)
                     data['temp'].append(temp)
-                    data['hum'].append(hum)
                     data['pres'].append(pres)
                     data['alt'].append(alt)
 
@@ -213,7 +208,6 @@ def generate_html(data):
     
     # Calculate stats
     stats_temp = calculate_stats(data['temp'])
-    stats_hum = calculate_stats(data['hum'])
     stats_pres = calculate_stats(data['pres'])
     stats_alt = calculate_stats(data['alt'])
 
@@ -225,7 +219,7 @@ def generate_html(data):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanSat BME280 Data Report</title>
+    <title>CanSat BMP280 Data Report</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -235,7 +229,7 @@ def generate_html(data):
 <body>
     <div class="container">
         <header>
-            <h1>CanSat BME280 Mission Report</h1>
+            <h1>CanSat BMP280 Mission Report</h1>
             <div class="subtitle">Visualización de datos de telemetría</div>
         </header>
 
@@ -249,17 +243,6 @@ def generate_html(data):
                 </div>
                 <div class="subtitle" style="font-size: 0.85rem; margin-top: 0.5rem">
                     Prom: {stats_temp['avg']:.1f} • Max: {stats_temp['max']:.1f}
-                </div>
-            </div>
-
-            <!-- Humidity -->
-            <div class="card" style="border-top: 4px solid var(--accent-hum)">
-                <div class="stat-title">Humedad</div>
-                <div class="stat-value" style="color: var(--accent-hum)">
-                    {stats_hum['last']:.1f}<span class="stat-unit">%</span>
-                </div>
-                <div class="subtitle" style="font-size: 0.85rem; margin-top: 0.5rem">
-                    Prom: {stats_hum['avg']:.1f} • Max: {stats_hum['max']:.1f}
                 </div>
             </div>
 
@@ -291,10 +274,6 @@ def generate_html(data):
             <div class="chart-container">
                 <div class="chart-title">Temperatura (°C)</div>
                 <canvas id="chartTemp"></canvas>
-            </div>
-            <div class="chart-container">
-                <div class="chart-title">Humedad (%)</div>
-                <canvas id="chartHum"></canvas>
             </div>
             <div class="chart-container">
                 <div class="chart-title">Presión (hPa)</div>
@@ -402,11 +381,7 @@ def generate_html(data):
             end: 'rgba(244, 63, 94, 0.0)'
         }});
 
-        createChart('chartHum', 'Humedad', rawData.hum, {{
-            border: '#06b6d4',
-            start: 'rgba(6, 182, 212, 0.5)',
-            end: 'rgba(6, 182, 212, 0.0)'
-        }});
+
 
         createChart('chartPres', 'Presión', rawData.pres, {{
             border: '#eab308',

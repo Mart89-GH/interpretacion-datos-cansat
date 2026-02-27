@@ -7,6 +7,7 @@ import time
 from collections import deque
 from datetime import datetime
 import numpy as np
+import subprocess
 
 import serial
 import serial.tools.list_ports
@@ -22,7 +23,7 @@ import csv
 
 # ========= CONFIG =========
 PORT = None  # Auto-detect
-BAUD = 115200  # Debe coincidir con Serial.begin() del receptor
+BAUD = 9600  # Debe coincidir con Serial.begin() del receptor
 WINDOW = 120  # 2 minutos de datos a 1 Hz
 READ_TIMEOUT = 0.1  # Timeout corto para no bloquear la UI
 
@@ -697,3 +698,12 @@ plt.show()
 print(f"\n[INFO] Sesión terminada. Datos guardados en: {CSV_FILE}")
 print(f"[INFO] Total de paquetes recibidos: {packet_count}")
 print(f"[INFO] Total de resets: {reset_count}")
+
+print("\n[INFO] Generando informe HTML...")
+try:
+    report_script = os.path.join(BASE_DIR, "python", "generate_report.py")
+    # Utilizamos sys.executable para asegurarnos de usar el mismo entorno de Python
+    import sys
+    subprocess.run([sys.executable, report_script], check=True)
+except Exception as e:
+    print(f"[ERROR] No se pudo generar el informe: {e}")

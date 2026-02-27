@@ -36,6 +36,9 @@
  *   RXEN -> Pin 5
  *   TXEN -> Pin 6
  * ===================================================================
+ * Tensiones
+ *----------------
+ *   GND-VCC = ?
  */
 
 #include <Wire.h>
@@ -78,6 +81,18 @@ unsigned long lastSend = 0;
 bool bmpOK = false;
 bool loraOK = false;
 
+// Variables para control remoto
+volatile bool receivedFlag = false;
+bool transmitting = false; // El CANSAT inicia en estado inactivo
+
+// ISR para recepción de comandos
+#if defined(ESP8266) || defined(ESP32)
+  ICACHE_RAM_ATTR
+#endif
+void setFlag(void) {
+  receivedFlag = true;
+}
+
 // ===================================================================
 // SETUP
 // ===================================================================
@@ -115,6 +130,15 @@ void setup() {
   if (state == RADIOLIB_ERR_NONE) {
     Serial.println(F("OK!"));
     loraOK = true;
+    
+    // Configurar interrupción de recepción para comandos
+    radio.setDio1Action(setFlag);
+    
+    // Iniciar escucha continua para recibir comandos desde tierra
+    state = radio.startReceive();
+    if (state == RADIOLIB_ERR_NONE) {
+      Serial.println(F("[LoRa] Escuchando comandos de activacion..."));
+    }
   } else {
     Serial.print(F("ERROR! Codigo: "));
     Serial.println(state);
@@ -139,7 +163,40 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
-  // Respetar intervalo de envio (1Hz como el original)
+  // === 1. LEER COMANDOS RECIBIDOS DESDE TIERRA ===
+  if (receivedFlag) {
+    receivedFlag = false;
+    
+    String cmd;
+    int state = radio.readData(cmd);
+    
+    if (state == RADIOLIB_ERR_NONE) {
+      cmd.trim();
+      Serial.print(F("[CMD RX] Recibido: "));
+      Serial.println(cmd);
+      
+      // Comandos de activacion
+      if (cmd == "280" || cmd == "ON" || cmd == "START") {
+        transmitting = true;
+        Serial.println(F("[!] TRANSMISION ACTIVADA"));
+      } 
+      // Comandos de desactivacion
+      else if (cmd == "OFF" || cmd == "STOP") {
+        transmitting = false;
+        Serial.println(F("[!] TRANSMISION DETENIDA"));
+      }
+    }
+    
+    // Volver a escuchar
+    radio.startReceive();
+  }
+
+  // === 2. VERIFICAR SI ESTAMOS ACTIVOS ===
+  if (!transmitting) {
+    return; // Si no estamos transmitiendo, terminar loop
+  }
+
+  // === 3. TRANSMITIR DATOS (Respetar SEND_INTERVAL) ===
   if (now - lastSend < SEND_INTERVAL) {
     return;
   }
@@ -177,6 +234,7 @@ void loop() {
 
   // ----- Enviar por LoRa -----
   if (loraOK) {
+    // Al llamar a transmit, cambia automaticamente a modo TX y luego a standby
     int state = radio.transmit(data);
 
     if (state == RADIOLIB_ERR_NONE) {
@@ -188,6 +246,9 @@ void loop() {
       Serial.print(F(" | Datos: "));
       Serial.println(data);
     }
+    
+    // DESPUES de transmitir, volver a modo escucha para recibir el comando de apagado!
+    radio.startReceive();
   } else {
     // Sin LoRa, solo imprimir por serial (para debug)
     Serial.print(F("[NO LORA] "));

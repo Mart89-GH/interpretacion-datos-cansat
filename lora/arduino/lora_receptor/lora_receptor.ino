@@ -113,8 +113,35 @@ void setup() {
 // LOOP
 // ===================================================================
 void loop() {
+  // === 1. LEER COMANDOS DEL SERIAL MONITOR Y ENVIAR AL EMISOR ===
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.length() > 0) {
+      Serial.print(F(">>> ENVIANDO COMANDO: "));
+      Serial.println(cmd);
+      
+      // Cambiar a standby para transmitir
+      radio.standby();
+      
+      // Enviar comando
+      int state = radio.transmit(cmd);
+      
+      if (state == RADIOLIB_ERR_NONE) {
+        Serial.println(F(">>> COMANDO ENVIADO OK"));
+      } else {
+        Serial.print(F(">>> ERROR AL ENVIAR COMANDO: "));
+        Serial.println(state);
+      }
+      
+      // Volver a escuchar
+      radio.startReceive();
+    }
+  }
+
+  // === 2. PROCESAR PAQUETES RECIBIDOS ===
   if (!receivedFlag) {
-    return;  // Nada que hacer, esperar interrupción
+    return;  // No hay paquetes, terminar iteracion
   }
   
   // Resetear bandera
